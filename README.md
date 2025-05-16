@@ -28,12 +28,4 @@ python main.py
 
 ### 🧠 Cara upload ke GitHub
 
-Jika kamu belum buat repo:
 
-```bash
-cd ~
-git clone https://github.com/MIRACLE69/monad-telegram-bot.git
-cd monad-telegram-bot
-# Tambahkan file
-touch main.py requirements.txt README.md
-# Paste isi dari atas ke masing-masing file
