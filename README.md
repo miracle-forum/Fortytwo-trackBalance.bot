@@ -17,7 +17,7 @@ A Telegram bot to check your 42T token balance on the Monad testnet.
 ## Setup
 
 ```bash
-git clone https://github.com/MIRACLE69/monad-telegram-bot.git
+git clone https://github.com/MIRACLE6.git
 cd monad-telegram-bot
 python3 -m venv venv
 source venv/bin/activate
@@ -26,6 +26,5 @@ python main.py
 
 ---
 
-### 🧠 Cara upload ke GitHub
 
 
