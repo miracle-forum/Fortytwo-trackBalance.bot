@@ -27,9 +27,9 @@ python main.py
 ---
 
 
-
 import logging
 import asyncio
+import json
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 from web3 import Web3
@@ -38,11 +38,12 @@ from web3 import Web3
 BOT_TOKEN = '7670074494:AAEBo7gbIDbX4KTRWNQJM1_RA2cnVttMK4Q'
 MONAD_RPC = 'https://testnet-rpc.monad.xyz'
 FOR_TOKEN_ADDRESS = '0x22A3d96424Df6f04d02477cB5ba571BBf615F47E'
+WALLETS_FILE = 'wallets.json'
+BALANCE_CACHE_FILE = 'balances.json'
 
 # === SETUP ===
 w3 = Web3(Web3.HTTPProvider(MONAD_RPC))
 FOR_TOKEN = w3.to_checksum_address(FOR_TOKEN_ADDRESS)
-tracked_wallets = set()
 
 ERC20_ABI = [
     {
@@ -63,6 +64,22 @@ ERC20_ABI = [
 
 token_contract = w3.eth.contract(address=FOR_TOKEN, abi=ERC20_ABI)
 
+# === DATABASE ===
+def load_json(path):
+    try:
+        with open(path, 'r') as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_json(path, data):
+    with open(path, 'w') as f:
+        json.dump(data, f, indent=2)
+
+tracked_wallets = load_json(WALLETS_FILE)
+balance_cache = load_json(BALANCE_CACHE_FILE)
+
+# === BALANCE CHECK ===
 def get_balance(wallet):
     try:
         checksum_wallet = w3.to_checksum_address(wallet)
@@ -74,9 +91,8 @@ def get_balance(wallet):
         return None
 
 # === TELEGRAM BOT COMMANDS ===
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Welcome! Use /addwallet <address> to start tracking.")
+    await update.message.reply_text("👋 Welcome! Use /addwallet <address> to start tracking your wallet.")
 
 async def addwallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
@@ -88,34 +104,41 @@ async def addwallet(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Invalid address.")
         return
 
-    tracked_wallets.add(w3.to_checksum_address(wallet))
-    await update.message.reply_text("✅ Wallet added successfully!")
-
-async def listwallets(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not tracked_wallets:
-        await update.message.reply_text("📭 No wallets tracked yet.")
-        return
-
-    response = "📋 Tracked wallets and FOR balances:\n"
-    for wallet in tracked_wallets:
-        bal = get_balance(wallet)
-        bal_str = f"{bal:.4f} FOR" if bal is not None else "Error"
-        response += f"{wallet} - {bal_str}\n"
-
-    await update.message.reply_text(response)
+    user_id = str(update.effective_user.id)
+    tracked_wallets[user_id] = w3.to_checksum_address(wallet)
+    save_json(WALLETS_FILE, tracked_wallets)
+    await update.message.reply_text(f"✅ Wallet set for tracking: {wallet}")
 
 async def totalfor(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not tracked_wallets:
-        await update.message.reply_text("📭 No wallets tracked yet.")
+    user_id = str(update.effective_user.id)
+    wallet = tracked_wallets.get(user_id)
+
+    if not wallet:
+        await update.message.reply_text("📭 You haven't added a wallet yet. Use /addwallet.")
         return
 
-    response = "📊 Total FOR received per wallet:\n"
-    for wallet in tracked_wallets:
-        bal = get_balance(wallet)
-        bal_str = f"{bal:.4f}" if bal is not None else "0.0000"
-        response += f"{wallet} - {bal_str} FOR\n"
+    bal = get_balance(wallet)
+    bal_str = f"{bal:.4f}" if bal is not None else "0.0000"
+    await update.message.reply_text(f"📊 Wallet: {wallet}\n💰 Total FOR: {bal_str} FOR")
 
-    await update.message.reply_text(response)
+# === BACKGROUND TASK FOR NOTIFICATIONS ===
+async def monitor_wallets(application):
+    while True:
+        for user_id, wallet in tracked_wallets.items():
+            new_balance = get_balance(wallet)
+            if new_balance is None:
+                continue
+
+            old_balance = balance_cache.get(user_id)
+            if old_balance is None or abs(new_balance - old_balance) > 0.0001:
+                balance_cache[user_id] = new_balance
+                save_json(BALANCE_CACHE_FILE, balance_cache)
+                try:
+                    await application.bot.send_message(chat_id=int(user_id), text=f"🔔 Balance update for {wallet}:\nNew Balance: {new_balance:.4f} FOR")
+                except Exception as e:
+                    logging.error(f"Error sending message to {user_id}: {e}")
+
+        await asyncio.sleep(60)  # Check every 60 seconds
 
 # === MAIN ===
 async def main():
@@ -123,13 +146,14 @@ async def main():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("addwallet", addwallet))
-    app.add_handler(CommandHandler("listwallets", listwallets))
     app.add_handler(CommandHandler("totalfor", totalfor))
 
     print("✅ Bot is running...")
+    asyncio.create_task(monitor_wallets(app))
     await app.run_polling()
 
 if __name__ == '__main__':
     import nest_asyncio
     nest_asyncio.apply()
     asyncio.get_event_loop().run_until_complete(main())
+
