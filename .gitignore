@@ -1,0 +1,4 @@
+__pycache__/
+wallets.json
+balances.json
+.env
