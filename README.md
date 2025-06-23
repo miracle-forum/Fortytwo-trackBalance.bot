@@ -1,28 +1,49 @@
-# Fortytwo-trackBalance.bot
-python-telegram-bot==20.3
-web3
-nest_asyncio
-# 🛰️ FortyTwo Track Bot (FOR Balance Checker)
+# 🤖 FortyTwo Track Bot (FOR Balance Checker)
 
-A Telegram bot to check your FOR token balance on the Monad testnet.
+A Telegram bot to track **FOR token** balance on the **Monad testnet**, with real-time alerts when balances change.
+try it now https://t.me/FortyTwo_trackbot
+---
 
-## Features
-- Set your EVM wallet address
-- Instantly check your 42T token balance
-- Uses Monad testnet and 42T token smart contract
+## 🚀 Features
 
-## Telegram Bot
-👉 [Click here to try it](https://t.me/FortyTwo_trackbot)
+- 🧾 Monitor FOR token balance in real time
+- 👤 One wallet per Telegram user
+- 🔔 Automatic notifications on balance updates
+- ⚙️ Built with `python-telegram-bot` and `web3.py`
 
-## Setup
+---
 
+## ⚙️ Installation
+
+1. Clone the repository:
 ```bash
-git clone https://github.com/MIRACLE6.git
-cd monad-telegram-bot
-python3 -m venv venv
-source venv/bin/activate
+git clone https://github.com/miracle-forum/Fortytwo-trackBalance.bot.git
+cd Fortytwo-trackBalance.bot
+
 pip install -r requirements.txt
-python main.py
+
+python bot.py
+🛠️ Bot Commands
+Command	Description
+/start	Greet the user
+/addwallet	Set the wallet to track
+/totalfor	Show current FOR token balance
+
+📦 Requirements
+Python 3.9+
+
+python-telegram-bot
+
+web3.py
+
+nest_asyncio
+
+📄 License
+MIT License © 2025 miracle-forum
+
+
+
+
 
 ---
 
